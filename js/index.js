@@ -27,12 +27,87 @@
 // Пролистывание изображений галереи в открытом модальном окне клавишами "влево" и "вправо".
 import images from './gallery-items.js';
 
-const bodyRef = document.querySelector('body')
-const imagesListRef = document.querySelector('.js-gallery');
-const modalRef = document.querySelector('.js-lightbox');
-const modalOverlay = document.querySelector('.lightbox__overlay');
+const imagesListRef = document.querySelector('ul.js-gallery');
+const modalRef = document.querySelector('div.lightbox');
+const modalOverlay = document.querySelector('div.lightbox__overlay');
 const modalImgRef = document.querySelector('.lightbox__image');
-const closeModal = document.querySelector('.lightbox__button');
+const closeModal = document.querySelector('button[data-action="close-lightbox"]');
+
+function createImgCard(images) {
+  return images
+  .reduce((acc, {preview, original, description}) => {
+      return (
+        acc +
+        `<li class="gallery__item">
+    <a
+      class="gallery__link"
+      href="${original}"
+    >
+      <img
+        class="gallery__image"
+        src="${preview}"
+        data-source="${original}"
+        alt="${description}"
+      />
+    </a>
+  </li>`
+      );
+    },
+    '',
+    );
+  }
+
+const imagesMarkup = createImgCard(images);
+imagesListRef.insertAdjacentHTML('beforeend', imagesMarkup);
+imagesListRef.addEventListener('click', onImgContainerClick);
+closeModal.addEventListener('click', onCloseBtnClick);
+modalOverlay.addEventListener('click', onBackdropClick);
+
+
+function onImgContainerClick(event) { 
+  event.preventDefault(); 
+//  if (event.target.localName === 'img') {   
+//     return;
+if (event.target.nodeName !== "IMG") { 
+     return;
+ }
+
+ addIsOpenImgClass(modalRef);
+
+modalImgRef.src = event.target.dataset.source;
+ modalImgRef.alt = event.target.alt;
+
+ window.addEventListener("keydown", onEscKeyPress);
+ window.addEventListener("keydown", onRightKeyPress);
+ window.addEventListener("keydown", onLeftKeyPress);
+}
+
+function onCloseBtnClick(event) { 
+  
+  modalRef.classList.remove('is-open');
+  modalImgRef.src = '';
+  modalImgRef.alt = '';
+  
+  window.removeEventListener("keydown", onEscKeyPress);
+  window.removeEventListener("keydown", onRightKeyPress);
+  window.removeEventListener("keydown", onLeftKeyPress);
+}
+
+function onBackdropClick(event) { 
+  if (event.target === event.currentTarget) {
+      onCloseBtnClick();
+    }
+  }
+  function addIsOpenImgClass(image) { 
+    image.classList.add('is-open');
+    
+  }
+  
+  function onEscKeyPress(event) { 
+    if (event.code === "Escape") {
+   onCloseBtnClick();
+  }
+  }
 
 let currentImg = 0;
 let currentAlt = 0;
@@ -47,96 +122,36 @@ const altArray = images.reduce((acc, { description }) => {
   return acc;
 }, []);
 
-const imagesMarkup = images.reduce(
-  (acc, {preview, original, description}) => {
-    return (
-      acc +
-      `<li class="gallery__item">
-  <a
-    class="gallery__link"
-    href="${original}"
-  >
-    <img
-      class="gallery__image"
-      src="${preview}"
-      data-source="${original}"
-      alt="${description}"
-    />
-  </a>
-</li>`
-    );
-  },
-  '',
-);
 
-imagesListRef.insertAdjacentHTML('afterbegin', imagesMarkup);
+function onRightKeyPress(event)  {
+  currentImg = imgArray.indexOf(modalImgRef.src);
+  currentAlt = altArray.indexOf(modalImgRef.alt);
 
-imagesListRef.addEventListener('click', event => {
-  event.preventDefault();
-  if (event.target.localName === 'img') {
-    addImgModal();
-    currentImg = imgArray.indexOf(modalImgRef.src);
-    currentAlt = altArray.indexOf(modalImgRef.alt);
+  if (event.code === 'ArrowRight') {
+    if (currentImg === imgArray.length - 1) {
+    currentImg = 0
+  } else { currentImg += 1 }
+      modalImgRef.src = imgArray[currentImg];
+  
+      if (currentAlt === altArray.length - 1) {
+    currentAlt = 0
+  } else { currentAlt += 1}
+        modalImgRef.alt = altArray[currentAlt];
+      }
+    
+};
+
+function onLeftKeyPress(event) {
+  if (event.code === 'ArrowLeft') {
+    if (currentImg === -1) {
+      currentImg = currentImg + imgArray.length
+    } else {currentImg -= 1 }
+    modalImgRef.src = imgArray[currentImg];
+
+    if (currentAlt === -1) {
+      currentAlt = currentAlt + altArray.length
+    } else {currentAlt -= 1 }
+      modalImgRef.alt = altArray[currentAlt];
   }
-});
+};
 
-closeModal.addEventListener('click', () => {
-  removeImgModal();
-});
-
-modalOverlay.addEventListener('click', event => {
-  if (event.target.localName === 'img') {
-    return;
-  }
-  removeImgModal();
-});
-
-window.addEventListener('keyup', event => {
-  if (event.key === 'Escape') {
-    removeImgModal();
-  }
-});
-
-function removeImgModal() {
-  bodyRef.classList.remove('is-open')
-  modalRef.classList.remove('is-open');
-  modalImgRef.src = '';
-  modalImgRef.alt = '';
-}
-
-function addImgModal() {
-  bodyRef.classList.add('is-open')
-  modalRef.classList.add('is-open');
-  modalImgRef.src = event.target.dataset.source;
-  modalImgRef.alt = event.target.alt;
-}
-
-window.addEventListener('keyup', event => {
-  if (event.key === 'ArrowRight') {
-    modalImgRef.src =
-      imgArray[
-        currentImg === imgArray.length ? (currentImg = 0) : currentImg++
-      ];
-    modalImgRef.alt =
-      altArray[
-        currentAlt === altArray.length ? (currentAlt = 0) : currentAlt++
-      ];
-  }
-});
-
-window.addEventListener('keyup', event => {
-  if (event.key === 'ArrowLeft') {
-    modalImgRef.src =
-      imgArray[
-        currentImg === -1
-          ? (currentImg = currentImg + imgArray.length)
-          : currentImg--
-      ];
-    modalImgRef.alt =
-      altArray[
-        currentAlt === -1
-          ? (currentAlt = currentAlt + altArray.length)
-          : currentAlt--
-      ];
-  }
-});
